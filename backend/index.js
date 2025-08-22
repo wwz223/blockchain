@@ -1,3 +1,15 @@
+/**
+ * 🌐 区块链REST API服务器
+ * 为Web3初学者提供完整的区块链交互接口
+ * 
+ * 功能包括：
+ * - 📊 区块链状态查询
+ * - 🏦 账户管理
+ * - 💸 交易处理  
+ * - ⛏️ 挖矿操作
+ * - 💧 水龙头服务
+ */
+
 const express = require('express');
 const cors = require('cors');
 const { Blockchain, Transaction } = require('./blockchain');
@@ -5,25 +17,58 @@ const { Blockchain, Transaction } = require('./blockchain');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
-app.use(express.json());
+// 🔧 中间件配置
+app.use(cors());                    // 允许跨域请求(前端调用需要)
+app.use(express.json());            // 解析JSON请求体
 
+// 🏗️ 初始化区块链实例
 const blockchain = new Blockchain();
 
+// ============================================
+// 📊 区块链信息查询 API
+// ============================================
+
+/**
+ * GET /api/blockchain/info
+ * 📋 获取区块链整体状态信息
+ * 
+ * 返回数据：
+ * - height: 区块链高度(区块数量)
+ * - difficulty: 当前挖矿难度
+ * - consensusAlgorithm: 共识算法类型(POW)
+ * - targetBlockTime: 目标出块时间(毫秒)
+ * - miningReward: 挖矿奖励数量
+ */
 app.get('/api/blockchain/info', (req, res) => {
     try {
         const info = blockchain.getBlockchainInfo();
+        console.log('📊 区块链信息查询:', info);
         res.json({ success: true, data: info });
     } catch (error) {
+        console.error('❌ 获取区块链信息失败:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
+/**
+ * GET /api/blocks
+ * 📦 获取所有区块信息
+ * 
+ * 返回数据：每个区块包含
+ * - hash: 区块哈希值
+ * - previousHash: 前一个区块哈希
+ * - transactions: 包含的所有交易
+ * - miner: 挖矿地址
+ * - nonce: 挖矿随机数
+ * - miningTime: 挖矿用时
+ */
 app.get('/api/blocks', (req, res) => {
     try {
         const blocks = blockchain.getAllBlocks();
+        console.log(`📦 获取所有区块，共 ${blocks.length} 个区块`);
         res.json({ success: true, data: blocks });
     } catch (error) {
+        console.error('❌ 获取区块失败:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -239,6 +284,201 @@ app.get('/api/faucet/check/:address', (req, res) => {
             data: canUse
         });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ============================================
+// ⛏️ 自动挖矿系统 API
+// ============================================
+
+/**
+ * POST /api/mining/auto/start
+ * 🚀 启动自动挖矿系统
+ * 
+ * 请求体：
+ * - autoMineInterval: 自动挖矿检查间隔(毫秒，可选，默认10000)
+ * - minTransactionsToMine: 触发挖矿的最小交易数(可选，默认1)
+ * - maxBlockTime: 最大区块间隔，超时强制出块(毫秒，可选，默认30000)
+ */
+app.post('/api/mining/auto/start', (req, res) => {
+    try {
+        const { autoMineInterval = 10000, minTransactionsToMine = 1, maxBlockTime = 30000 } = req.body;
+        
+        const result = blockchain.startAutoMining({
+            autoMineInterval,
+            minTransactionsToMine,
+            maxBlockTime
+        });
+        
+        if (result.success) {
+            console.log('🚀 自动挖矿系统已启动');
+            res.json({
+                success: true,
+                message: 'Auto mining started successfully',
+                config: result.config
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('❌ 启动自动挖矿失败:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/mining/auto/stop
+ * ⏹️ 停止自动挖矿系统
+ */
+app.post('/api/mining/auto/stop', (req, res) => {
+    try {
+        const result = blockchain.stopAutoMining();
+        
+        console.log('⏹️ 自动挖矿系统已停止');
+        res.json({
+            success: true,
+            message: 'Auto mining stopped successfully',
+            stats: result.stats
+        });
+    } catch (error) {
+        console.error('❌ 停止自动挖矿失败:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/mining/miners/add
+ * 👥 添加矿工到挖矿网络
+ * 
+ * 请求体：
+ * - minerAddress: 矿工地址或别名
+ * - hashPower: 算力权重(可选，默认1.0)
+ */
+app.post('/api/mining/miners/add', (req, res) => {
+    try {
+        const { minerAddress, hashPower = 1.0 } = req.body;
+        
+        if (!minerAddress) {
+            return res.status(400).json({
+                success: false,
+                error: 'Miner address is required'
+            });
+        }
+        
+        const result = blockchain.addMiner(minerAddress, hashPower);
+        
+        if (result.success) {
+            console.log(`👥 矿工已加入网络: ${minerAddress} (算力: ${hashPower})`);
+            res.json({
+                success: true,
+                message: 'Miner added successfully',
+                miner: result.miner,
+                totalMiners: blockchain.miners.length
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('❌ 添加矿工失败:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/mining/miners/remove
+ * 👋 从挖矿网络移除矿工
+ * 
+ * 请求体：
+ * - minerAddress: 矿工地址或别名
+ */
+app.post('/api/mining/miners/remove', (req, res) => {
+    try {
+        const { minerAddress } = req.body;
+        
+        if (!minerAddress) {
+            return res.status(400).json({
+                success: false,
+                error: 'Miner address is required'
+            });
+        }
+        
+        const result = blockchain.removeMiner(minerAddress);
+        
+        if (result.success) {
+            console.log(`👋 矿工已离开网络: ${minerAddress}`);
+            res.json({
+                success: true,
+                message: 'Miner removed successfully',
+                remainingMiners: blockchain.miners.length
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                error: result.error
+            });
+        }
+    } catch (error) {
+        console.error('❌ 移除矿工失败:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/mining/status
+ * 📊 获取挖矿系统状态
+ */
+app.get('/api/mining/status', (req, res) => {
+    try {
+        const status = blockchain.getMiningStatus();
+        
+        res.json({
+            success: true,
+            data: status
+        });
+    } catch (error) {
+        console.error('❌ 获取挖矿状态失败:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/mining/competition/start
+ * 🏁 手动触发一次挖矿竞争(用于测试)
+ */
+app.post('/api/mining/competition/start', (req, res) => {
+    try {
+        if (blockchain.miners.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No miners available for competition'
+            });
+        }
+        
+        if (blockchain.pendingTransactions.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No pending transactions to mine'
+            });
+        }
+        
+        // 立即触发一次挖矿竞争
+        blockchain.startMiningCompetition();
+        
+        res.json({
+            success: true,
+            message: 'Mining competition started',
+            miners: blockchain.miners.length,
+            pendingTransactions: blockchain.pendingTransactions.length
+        });
+    } catch (error) {
+        console.error('❌ 启动挖矿竞争失败:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });

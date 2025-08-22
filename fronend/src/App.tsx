@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import BlockchainExplorer from './components/BlockchainExplorer'
 import AccountManager from './components/AccountManager'
 import TransactionManager from './components/TransactionManager'
+import AutoMiningManager from './components/AutoMiningManager'
 import Faucet from './components/Faucet'
 import CosmjsDemo from './components/CosmjsDemo'
 import { blockchainApi } from './services/api'
@@ -30,6 +31,7 @@ function App() {
     { id: 'accounts', name: '账户管理', component: AccountManager },
     { id: 'faucet', name: '代币水龙头', component: Faucet },
     { id: 'transactions', name: '交易与挖矿', component: TransactionManager },
+    { id: 'automining', name: '自动挖矿系统', component: AutoMiningManager },
     { id: 'cosmjs', name: 'CosmJS 演示', component: CosmjsDemo },
   ]
 

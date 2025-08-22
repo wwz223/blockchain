@@ -156,6 +156,83 @@ export const blockchainApi = {
     const response = await api.get('/health');
     return response.data;
   },
+
+  // ============================================
+  // 🔥 自动挖矿系统 API
+  // ============================================
+
+  // 启动自动挖矿
+  startAutoMining: async (config?: {
+    autoMineInterval?: number;
+    minTransactionsToMine?: number;
+    maxBlockTime?: number;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    config: any;
+  }> => {
+    const response = await api.post('/mining/auto/start', config || {});
+    return response.data;
+  },
+
+  // 停止自动挖矿
+  stopAutoMining: async (): Promise<{
+    success: boolean;
+    message: string;
+    stats: any;
+  }> => {
+    const response = await api.post('/mining/auto/stop');
+    return response.data;
+  },
+
+  // 添加矿工
+  addMiner: async (minerAddress: string, hashPower?: number): Promise<{
+    success: boolean;
+    message: string;
+    miner: any;
+    totalMiners: number;
+  }> => {
+    const response = await api.post('/mining/miners/add', { 
+      minerAddress, 
+      hashPower: hashPower || 1.0 
+    });
+    return response.data;
+  },
+
+  // 移除矿工
+  removeMiner: async (minerAddress: string): Promise<{
+    success: boolean;
+    message: string;
+    remainingMiners: number;
+  }> => {
+    const response = await api.post('/mining/miners/remove', { minerAddress });
+    return response.data;
+  },
+
+  // 获取挖矿状态
+  getMiningStatus: async (): Promise<{
+    autoMining: boolean;
+    totalMiners: number;
+    miners: any[];
+    config: any;
+    stats: any;
+    lastBlockTime: number;
+    nextBlockEstimate: number;
+  }> => {
+    const response = await api.get('/mining/status');
+    return response.data.data;
+  },
+
+  // 触发挖矿竞争
+  startMiningCompetition: async (): Promise<{
+    success: boolean;
+    message: string;
+    miners: number;
+    pendingTransactions: number;
+  }> => {
+    const response = await api.post('/mining/competition/start');
+    return response.data;
+  },
 };
 
 export { blockchainApi as default };
